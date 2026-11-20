@@ -15,11 +15,13 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg(null);
+    setSuccessMsg(null);
     try {
       await api.register({
         nombre: nombre.trim(),
@@ -29,6 +31,9 @@ export default function RegisterPage() {
         password: password,
       });
       router.push("/dashboard");
+      setSuccessMsg(
+        `✅ ¡Cuenta creada! Te enviamos un correo a ${email.trim()} para verificar tu cuenta. Revisa tu bandeja de entrada (y la carpeta de spam).`
+      );
     } catch (err: any) {
       setErrorMsg(err.message || "Error al crear la cuenta.");
     } finally {
