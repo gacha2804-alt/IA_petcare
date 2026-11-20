@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.session import Base
@@ -22,6 +22,8 @@ class Usuario(Base):
     password_hash = Column(String(255), nullable=False)
     fecha_registro = Column(DateTime, default=datetime.utcnow)
     activo = Column(Boolean, default=True)
+    email_verificado = Column(Boolean, default=False)
+    token_verificacion = Column(Text, nullable=True)
 
     roles = relationship("UsuarioRol", back_populates="usuario", cascade="all, delete-orphan")
     mascotas = relationship("Mascota", back_populates="propietario", cascade="all, delete-orphan")

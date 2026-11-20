@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+import uuid
 from app.db.session import get_db
 from app.models.usuario import Usuario, Rol, UsuarioRol
 from app.schemas.auth import LoginRequest, TokenResponse, UserRegister, UserOut
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.deps import get_current_user
+from app.services.email_service import send_verification_email
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
@@ -20,6 +22,12 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="El usuario se encuentra inactivo."
+        )
+
+    if not user.email_verificado:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada."
         )
 
     roles = [ur.rol.nombre_rol for ur in user.roles]
@@ -50,11 +58,20 @@ def register(reg_data: UserRegister, db: Session = Depends(get_db)):
         apellido=reg_data.apellido,
         correo_electronico=reg_data.correo_electronico,
         telefono=reg_data.telefono,
-        password_hash=get_password_hash(reg_data.password)
+        password_hash=get_password_hash(reg_data.password),
+        email_verificado=False,
+        token_verificacion=str(uuid.uuid4())
     )
     db.add(nuevo_usuario)
     db.commit()
     db.refresh(nuevo_usuario)
+
+    # Enviar correo de verificación
+    send_verification_email(
+        nombre=nuevo_usuario.nombre,
+        correo=nuevo_usuario.correo_electronico,
+        token=nuevo_usuario.token_verificacion
+    )
 
     # Asignar rol por defecto
     rol_obj = db.query(Rol).filter(Rol.nombre_rol == reg_data.rol).first()
@@ -80,6 +97,22 @@ def register(reg_data: UserRegister, db: Session = Depends(get_db)):
         fecha_registro=nuevo_usuario.fecha_registro
     )
     return TokenResponse(access_token=token, token_type="bearer", usuario=user_out)
+
+@router.get("/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    usuario = db.query(Usuario).filter(Usuario.token_verificacion == token).first()
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token de verificación inválido o ya utilizado."
+        )
+    if usuario.email_verificado:
+        return {"message": "Tu correo ya estaba verificado. Puedes iniciar sesión."}
+
+    usuario.email_verificado = True
+    usuario.token_verificacion = None
+    db.commit()
+    return {"message": "✅ Correo verificado exitosamente. Ya puedes iniciar sesión en PetCare."}
 
 @router.get("/me", response_model=UserOut)
 def me(current_user: Usuario = Depends(get_current_user)):
