@@ -9,7 +9,7 @@ def send_verification_email(nombre: str, correo: str, token: str) -> bool:
 
     try:
         resend.Emails.send({
-            "from": "PetCare <no-reply@petcare.app>",
+            "from": "PetCare <onboarding@resend.dev>",
             "to": correo,
             "subject": "🐾 Verifica tu cuenta en PetCare",
             "html": f"""
