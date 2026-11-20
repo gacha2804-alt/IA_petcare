@@ -77,7 +77,7 @@ class ApiService {
   }
 
   // --- Auth ---
-  async login(correo_electronico: string, password: string):Promise<{ access_token: string; usuario: Usuario }> {
+  async login(correo_electronico: string, password: string): Promise<{ access_token: string; usuario: Usuario }> {
     const data = await this.request<{ access_token: string; usuario: Usuario }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ correo_electronico, password }),
@@ -89,16 +89,18 @@ class ApiService {
     return data;
   }
 
-  async register(data: { nombre: string; apellido: string; correo_electronico: string; password: string; telefono?: string }): Promise<{ access_token: string; usuario: Usuario }> {
-    const res = await this.request<{ access_token: string; usuario: Usuario }>("/auth/register", {
+  // ✅ CORREGIDO: register ya no guarda token (el usuario debe verificar email primero)
+  async register(data: {
+    nombre: string;
+    apellido: string;
+    correo_electronico: string;
+    password: string;
+    telefono?: string;
+  }): Promise<{ message: string; email: string }> {
+    return this.request<{ message: string; email: string }>("/auth/register", {
       method: "POST",
       body: JSON.stringify(data),
     });
-    this.setToken(res.access_token);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("petcare_user", JSON.stringify(res.usuario));
-    }
-    return res;
   }
 
   async getMe(): Promise<Usuario> {
