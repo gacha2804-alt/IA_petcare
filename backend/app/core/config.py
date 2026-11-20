@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     
     DATABASE_URL: str = "sqlite:///./petcare.db"
     
-    SECRET_KEY: str = "petcare_jwt_super_secret_key_production_grade_2026_change_in_prod"
+    SECRET_KEY: str  # REQUERIDO: define SECRET_KEY en las variables de entorno (Render)
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     

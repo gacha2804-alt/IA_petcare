@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import uuid
+from datetime import datetime, timedelta, timezone
 from app.db.session import get_db
 from app.models.usuario import Usuario, Rol, UsuarioRol
 from app.schemas.auth import LoginRequest, TokenResponse, UserRegister, UserOut
@@ -44,7 +45,7 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
     )
     return TokenResponse(access_token=token, token_type="bearer", usuario=user_out)
 
-@router.post("/register", response_model=TokenResponse)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(reg_data: UserRegister, db: Session = Depends(get_db)):
     existing = db.query(Usuario).filter(Usuario.correo_electronico == reg_data.correo_electronico).first()
     if existing:
@@ -60,7 +61,8 @@ def register(reg_data: UserRegister, db: Session = Depends(get_db)):
         telefono=reg_data.telefono,
         password_hash=get_password_hash(reg_data.password),
         email_verificado=False,
-        token_verificacion=str(uuid.uuid4())
+        token_verificacion=str(uuid.uuid4()),
+        token_verificacion_expiry=datetime.now(timezone.utc) + timedelta(hours=24)
     )
     db.add(nuevo_usuario)
     db.commit()
@@ -101,8 +103,21 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     if usuario.email_verificado:
         return {"message": "Tu correo ya estaba verificado. Puedes iniciar sesión."}
 
+    # Verificar que el token no haya expirado
+    if usuario.token_verificacion_expiry:
+        expiry = usuario.token_verificacion_expiry
+        # Hacer timezone-aware si no lo es
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > expiry:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El enlace de verificación ha expirado. Contacta soporte para reenviar el correo."
+            )
+
     usuario.email_verificado = True
     usuario.token_verificacion = None
+    usuario.token_verificacion_expiry = None
     db.commit()
     return {"message": "✅ Correo verificado exitosamente. Ya puedes iniciar sesión en PetCare."}
 

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from app.db.session import Base
 
 class Rol(Base):
@@ -20,10 +20,11 @@ class Usuario(Base):
     correo_electronico = Column(String(150), unique=True, nullable=False, index=True)
     telefono = Column(String(30), nullable=True)
     password_hash = Column(String(255), nullable=False)
-    fecha_registro = Column(DateTime, default=datetime.utcnow)
+    fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     activo = Column(Boolean, default=True)
     email_verificado = Column(Boolean, default=False)
-    token_verificacion = Column(Text, nullable=True)
+    token_verificacion = Column(Text, nullable=True, index=True)
+    token_verificacion_expiry = Column(DateTime(timezone=True), nullable=True)
 
     roles = relationship("UsuarioRol", back_populates="usuario", cascade="all, delete-orphan")
     mascotas = relationship("Mascota", back_populates="propietario", cascade="all, delete-orphan")
