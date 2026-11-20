@@ -84,19 +84,11 @@ def register(reg_data: UserRegister, db: Session = Depends(get_db)):
         db.commit()
 
     db.refresh(nuevo_usuario)
-    roles = [ur.rol.nombre_rol for ur in nuevo_usuario.roles]
-    token = create_access_token(subject=nuevo_usuario.id)
-
-    user_out = UserOut(
-        id=nuevo_usuario.id,
-        nombre=nuevo_usuario.nombre,
-        apellido=nuevo_usuario.apellido,
-        correo_electronico=nuevo_usuario.correo_electronico,
-        telefono=nuevo_usuario.telefono,
-        roles=roles,
-        fecha_registro=nuevo_usuario.fecha_registro
-    )
-    return TokenResponse(access_token=token, token_type="bearer", usuario=user_out)
+    # NO devolver token — el usuario debe verificar su correo primero
+    return {
+        "message": "Cuenta creada exitosamente. Revisa tu correo electrónico para verificar tu cuenta antes de iniciar sesión.",
+        "email": nuevo_usuario.correo_electronico
+    }
 
 @router.get("/verify-email")
 def verify_email(token: str, db: Session = Depends(get_db)):
